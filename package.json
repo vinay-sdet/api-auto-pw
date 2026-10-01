@@ -1,0 +1,21 @@
+{
+    "name": "restful-booker-api-tests",
+    "version": "1.0.0",
+    "private": true,
+    "type": "commonjs",
+    "scripts": {
+        "test": "playwright test",
+        "test:smoke": "playwright test --grep @smoke",
+        "test:regression": "playwright test --grep @regression",
+        "report": "playwright show-report",
+        "typecheck": "tsc --noEmit"
+    },
+    "devDependencies": {
+        "@playwright/test": "^1.63.0",
+        "@types/node": "^26.6.3",
+        "ajv": "^8.20.0",
+        "ajv-formats": "^3.0.1",
+        "dotenv": "^18.0.5",
+        "typescript": "^7.0.2"
+    }
+}
