@@ -5,7 +5,6 @@ This project contains a Playwright-based API test suite for the Restful Booker s
 ## Overview
 
 The suite exercises:
-
 - Auth token creation and invalid credential handling
 - Booking creation, retrieval, update, partial update, and deletion
 - Validation against JSON schemas with Ajv
