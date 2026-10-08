@@ -1,21 +1,21 @@
 # Restful Booker API Test Suite
 
-This project contains a Playwright-based API test suite for the Restful Booker service. It verifies authentication, booking CRUD flows, schema validation, and negative scenarios using real HTTP requests against the public API and local test fixtures.
+Playwright API tests for the [Restful Booker](https://restful-booker.herokuapp.com/apidoc/index.html) service. Every scenario sends a real HTTP request, then checks the status code and, where a body is returned, validates it with Ajv.
 
 ## Overview
 
-The suite exercises:
-- Auth token creation and invalid credential handling
-- Booking creation, retrieval, update, partial update, and deletion
-- Validation against JSON schemas with Ajv
-- Smoke and regression tagging with `@smoke` and `@regression`
-- HTML reporting with request/response logging for failed runs
+The suite covers:
 
-The API contract is based on the [Restful Booker API documentation](https://restful-booker.herokuapp.com/apidoc/index.html).
+- Auth token creation, including the auth response schema
+- Invalid credentials, which return `200` with `{ "reason": "Bad credentials" }`
+- Booking create, get, full update (`PUT`), partial update (`PATCH`), and delete
+- Negative booking cases: missing token, invalid token, and an unknown booking id
+- Smoke and regression tags (`@smoke`, `@regression`)
+- An HTML report, with a redacted request/response log attached when a test fails
 
 ## Prerequisites
 
-- Node.js 18+ or newer
+- Node.js 18 or newer
 - npm
 
 ## Setup
@@ -26,25 +26,29 @@ The API contract is based on the [Restful Booker API documentation](https://rest
 npm install
 ```
 
-2. Create your local environment file:
+2. Create a local environment file.
+
+Windows:
 
 ```sh
 copy .env.example .env
 ```
 
-On macOS/Linux, use:
+macOS and Linux:
 
 ```sh
 cp .env.example .env
 ```
 
-3. Update the values in `.env` if needed:
+3. Edit `.env` when you need a different target or credentials.
 
-- `BOOKER_BASE_URL` (defaults to `https://restful-booker.herokuapp.com`)
-- `BOOKER_USERNAME`
-- `BOOKER_PASSWORD`
+| Variable | Required | Default |
+| --- | --- | --- |
+| `BOOKER_BASE_URL` | No | `https://restful-booker.herokuapp.com` |
+| `BOOKER_USERNAME` | Yes | — |
+| `BOOKER_PASSWORD` | Yes | — |
 
-The `.env` file is local-only and should never be committed.
+`.env.example` includes the public demo credentials (`admin` / `password123`). Tests fail at startup if `BOOKER_USERNAME` or `BOOKER_PASSWORD` is missing. `.env` is gitignored.
 
 ## Run the tests
 
@@ -56,38 +60,55 @@ npm run report
 npm run typecheck
 ```
 
-### What each script does
+| Script | What it does |
+| --- | --- |
+| `npm test` | Runs the full suite |
+| `npm run test:smoke` | Runs tests tagged `@smoke` |
+| `npm run test:regression` | Runs tests tagged `@regression` |
+| `npm run report` | Opens the HTML report in `playwright-report/` |
+| `npm run typecheck` | Type-checks the project with `tsc --noEmit` |
 
-- `npm test`: runs the full Playwright suite
-- `npm run test:smoke`: runs only tests tagged with `@smoke`
-- `npm run test:regression`: runs only tests tagged with `@regression`
-- `npm run report`: opens the HTML test report
-- `npm run typecheck`: checks TypeScript compilation without emitting files
+## How a run works
 
-## Test behavior
+`playwright.config.ts` sets `baseURL` from `BOOKER_BASE_URL` and sends `Accept` and `Content-Type` as `application/json`. Tests run in parallel. Retries are `1` when `CI` is set and `0` otherwise. Traces are kept on failure, and the HTML reporter does not open automatically.
 
-The suite includes a health check before the booking tests run:
+Shared fixtures in `src/fixtures/api.fixtures.ts`:
 
-- `GET /ping` is expected to return status `201`
+- `authClient` and `bookingClient` call the API and record each request
+- `token` logs in with the configured credentials and checks the `auth` schema
+- `createdBooking` posts a unique booking, checks the `create-booking` schema, and deletes that booking after the test
 
-Booking-related tests validate both response status and schema structure, and they cover error paths such as:
+`PUT`, `PATCH`, and `DELETE` send the token as `Cookie: token=<token>`.
 
-- unauthorized PUT/DELETE requests
-- invalid tokens
-- non-existent booking IDs
+Booking tests call `GET /ping` once before the file runs and expect status `201`.
+
+When a test fails, the recorded calls are attached as `api-request-response-log`. Passwords, tokens, authorization headers, and cookies are replaced with `[REDACTED]`.
+
+## Scenarios
+
+| Test | Tags | Expected result |
+| --- | --- | --- |
+| Creates a token | `@smoke` `@regression` | Non-empty token string |
+| Rejects invalid credentials | `@regression` | `200` and `{ "reason": "Bad credentials" }` |
+| Creates a booking | `@smoke` `@regression` | `200`, `create-booking` schema, echoed name |
+| Gets a booking | `@smoke` `@regression` | `200`, `booking` schema, matching price and name |
+| Updates a booking with PUT | `@regression` | `200`, `booking` schema, updated body |
+| Partially updates a booking with PATCH | `@regression` | `200`, first name changes, last name stays |
+| Deletes a booking | `@regression` | `201`, then get returns `404` |
+| Rejects PUT without a token | `@regression` | `403` |
+| Rejects PUT with an invalid token | `@regression` | `403` |
+| Rejects DELETE without a token | `@regression` | `403` |
+| Rejects DELETE with an invalid token | `@regression` | `403` |
+| Gets a missing booking | `@regression` | `404` |
+
+Schema files live in `src/schemas/`: `auth.schema.json`, `booking.schema.json`, and `create-booking.schema.json`.
 
 ## Project structure
 
-- `config/`: environment configuration and required variables
-- `src/clients/`: auth and booking API clients
-- `src/fixtures/`: shared Playwright fixtures and test setup
-- `src/schemas/`: JSON Schema definitions for API payloads and responses
-- `src/utils/`: booking data, request logging, and validation helpers
-- `tests/`: API regression and smoke scenarios
-- `playwright-report/`: generated HTML reports
-
-## Notes
-
-- Playwright is configured with `trace: "retain-on-failure"` and HTML reporting enabled.
-- Failed runs retain diagnostics useful for debugging requests, status codes, and payloads.
-- Sensitive values such as passwords, auth tokens, and cookies are redacted in the logging output.
+- `config/` — environment variables
+- `src/clients/` — auth and booking API clients
+- `src/fixtures/` — Playwright fixtures, booking setup and cleanup, failure attachments
+- `src/schemas/` — JSON Schemas checked by Ajv
+- `src/utils/` — booking payloads, request logging, and schema validation
+- `tests/` — auth and booking specs
+- `playwright-report/` and `test-results/` — generated output, both gitignored
