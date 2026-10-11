@@ -11,7 +11,7 @@ The suite covers:
 - Booking create, get, full update (`PUT`), partial update (`PATCH`), and delete
 - Negative booking cases: missing token, invalid token, and an unknown booking id
 - Smoke and regression tags (`@smoke`, `@regression`)
-- An HTML report, with a redacted request/response log attached when a test fails
+- An HTML report, with a redacted request/response log attached when a test fails.
 
 ## Prerequisites
 
