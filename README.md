@@ -1,6 +1,6 @@
 # Restful Booker API Test Suite
 
-Playwright API tests for the [Restful Booker](https://restful-booker.herokuapp.com/apidoc/index.html) service. Every scenario sends a real HTTP request, then checks the status code and, where a body is returned, validates it with Ajv.
+Playwright API tests for the [Restful Booker](https://restful-booker.herokuapp.com/apidoc/index.html) service. Every scenario sends a real HTTP request, then checks the status code and, where a body is returned, validates it with Ajv
 
 ## Overview
 
