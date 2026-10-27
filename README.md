@@ -1,17 +1,17 @@
 # Restful Booker API Test Suite
 
-Playwright API tests for the [Restful Booker](https://restful-booker.herokuapp.com/apidoc/index.html) service. Every scenario sends a real HTTP request, then checks the status code and, where a body is returned, validates it with Ajv
+Playwright API tests for the [Restful Booker](https://restful-booker.herokuapp.com/apidoc/index.html) service. Each scenario calls the live API and checks the status code. Ajv checks the JSON body only for successful auth, create, get, and update responses. Error responses are asserted by status code.
 
 ## Overview
 
 The suite covers:
 
-- Auth token creation, including the auth response schema
-- Invalid credentials, which return `200` with `{ "reason": "Bad credentials" }`
-- Booking create, get, full update (`PUT`), partial update (`PATCH`), and delete
-- Negative booking cases: missing token, invalid token, and an unknown booking id
-- Smoke and regression tags (`@smoke`, `@regression`)
-- An HTML report, with a redacted request/response log attached when a test fails.
+- Creating an auth token and validating the auth response schema.
+- Rejecting invalid credentials with `200` and `{ "reason": "Bad credentials" }`.
+- Creating, reading, replacing (`PUT`), patching (`PATCH`), and deleting a booking.
+- Rejecting a `PUT` or `DELETE` that omits a token or sends an invalid one, and reading an unknown booking id.
+- Tagging scenarios `@smoke` or `@regression`.
+- Writing an HTML report and attaching a redacted request/response log when a test fails.
 
 ## Prerequisites
 
@@ -74,11 +74,11 @@ npm run typecheck
 
 Shared fixtures in `src/fixtures/api.fixtures.ts`:
 
-- `authClient` and `bookingClient` call the API and record each request
-- `token` logs in with the configured credentials and checks the `auth` schema
-- `createdBooking` posts a unique booking, checks the `create-booking` schema, and deletes that booking after the test
+- `authClient` and `bookingClient` call the API and record each request.
+- `token` logs in with the configured credentials and checks the `auth` schema (`token` is a non-empty string).
+- `createdBooking` posts a booking, checks the `create-booking` schema, and deletes that booking after the test, including when the test fails.
 
-`PUT`, `PATCH`, and `DELETE` send the token as `Cookie: token=<token>`.
+Each booking uses a unique `firstname` (`Api-<timestamp>-<random>`), last name `Automation`, total price `245`, a paid deposit, check-in `2030-01-05`, check-out `2030-01-12`, and additional need `Breakfast`. `PUT`, `PATCH`, and `DELETE` send the token as `Cookie: token=<token>`. Creating and reading a booking do not send a token.
 
 Booking tests call `GET /ping` once before the file runs and expect status `201`.
 
@@ -88,7 +88,7 @@ When a test fails, the recorded calls are attached as `api-request-response-log`
 
 | Test | Tags | Expected result |
 | --- | --- | --- |
-| Creates a token | `@smoke` `@regression` | Non-empty token string |
+| Creates a token | `@smoke` `@regression` | `auth` schema and a non-empty token |
 | Rejects invalid credentials | `@regression` | `200` and `{ "reason": "Bad credentials" }` |
 | Creates a booking | `@smoke` `@regression` | `200`, `create-booking` schema, echoed name |
 | Gets a booking | `@smoke` `@regression` | `200`, `booking` schema, matching price and name |
